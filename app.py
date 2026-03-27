@@ -44,7 +44,7 @@ if prompt := st.chat_input("Ask about heart health and symptoms!"):
         if sources:
             with st.expander("Sources"):
                 for source in sources:
-                    st.wrtie(sources)
+                    st.write(sources)
         
         st.session_state.messages.append({"role": "assistant", "content": response, "sources": sources})
 
