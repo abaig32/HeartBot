@@ -1,0 +1,19 @@
+# Copy this file to terraform.tfvars and update the values.
+# terraform.tfvars is gitignored and must never be committed.
+
+aws_region   = "us-east-1"
+environment  = "dev"
+project_name = "heartbot"
+
+# Bedrock model IDs
+llm_model_id       = "amazon.nova-micro-v1:0"
+embedding_model_id = "amazon.titan-embed-text-v2:0"
+
+# CloudWatch log retention (days)
+log_retention_days = 14
+
+# CORS origins
+# In dev, this is automatically overridden to ["*"] regardless of what is set here.
+# For staging/prod, set this to your Streamlit app's URL:
+# cors_allow_origins = ["https://your-streamlit-app.example.com"]
+cors_allow_origins = ["*"]

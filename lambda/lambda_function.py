@@ -1,13 +1,14 @@
 import json
 import boto3
+import os
 
 # Clients
 bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
 
-KNOWLEDGE_BASE_ID = 'GBSNRIEUEB'
-GUARDRAIL_ID = '7bjfn3t09jkq'
-GUARDRAIL_VERSION = '5'
-MODEL_ARN = 'arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0'
+KNOWLEDGE_BASE_ID = os.environ['KNOWLEDGE_BASE_ID']
+GUARDRAIL_ID = os.environ['GUARDRAIL_ID']
+GUARDRAIL_VERSION = os.environ['GUARDRAIL_VERSION']
+MODEL_ARN = os.environ['MODEL_ARN']
 
 CORS_HEADERS = {
     'Content-Type': 'application/json',
