@@ -491,3 +491,69 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.heartbot.execution_arn}/*/*"
 }
+
+resource "aws_s3_bucket" "frontendbucket" {
+  bucket        = "${var.project_name}-frontend-${var.environment}"
+  force_destroy = true
+  tags = local.common_tags
+}
+
+resource "aws_s3_bucket_public_access_block" "frontendblock" {
+  bucket = aws_s3_bucket.frontendbucket.id
+
+  block_public_acls = true
+  block_public_policy = true
+  ignore_public_acls = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "frontendversioning" {
+  bucket = aws_s3_bucket.frontendbucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "frontendencryption" {
+  bucket = aws_s3_bucket.frontendbucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_access_control" "frontend" {
+  name = "${var.project_name}-oac-${var.environment}"
+  origin_access_control_origin_type = "s3"
+  signing_behavior = "always"
+  signing_protocol = "sigv4"
+}
+
+resource "aws_s3_bucket_policy" "frontendpolicy" {
+  bucket = aws_s3_bucket.frontendbucket.id
+  policy = data.aws_iam_policy_document.frontendpolicydoc.json
+}
+
+data "aws_iam_policy_document" "frontendpolicydoc" {
+  statement {
+    principals {
+      type = "Service"
+      identifiers = [ "cloudfront.amazonaws.com" ]
+    }
+    
+    actions = [
+      "s3:GetObject"
+    ]
+
+    condition {
+      test = "StringEquals"
+      variable = "AWS:SourceArn"
+      values = [ aws_cloudfront_distribution.frontend.arn ]
+    }
+
+    resources = [ "${aws_s3_bucket.frontendbucket.arn}/*" ]
+  }
+}
