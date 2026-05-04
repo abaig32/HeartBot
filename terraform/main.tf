@@ -11,6 +11,14 @@ terraform {
       version = "~> 2.0"
     }
   }
+
+  backend "s3" {
+    bucket = "heartbot-terraform-state-abaig"
+    key = "heartbot/terraform.tfstate"
+    region = "us-east-1"
+    use_lockfile = true
+    encrypt = true
+  }
 }
 
 provider "aws" {
