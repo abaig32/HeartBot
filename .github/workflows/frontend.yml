@@ -1,0 +1,65 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Configure AWS credentials from GitHub secrets
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Install dependencies
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # Build the React app
+      # VITE_API_URL is injected at build time from GitHub secrets
+      # so the real API Gateway URL is never committed to the repo
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: npm run build
+
+      # Sync the dist/ folder to your S3 frontend bucket
+      # --delete removes files from S3 that no longer exist in dist/
+      # This keeps the bucket clean on every deploy
+      - name: Deploy to S3
+        run: |
+          aws s3 sync frontend/dist/ s3://heartbot-frontend-dev \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable"
+
+      # Invalidate the CloudFront cache so users get the new version immediately
+      # Without this, CloudFront would serve the old cached files for up to 24 hours
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
