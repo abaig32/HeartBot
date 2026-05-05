@@ -240,6 +240,16 @@ resource "aws_bedrockagent_data_source" "heartbot" {
       bucket_arn = aws_s3_bucket.knowledge_base.arn
     }
   }
+
+  vector_ingestion_configuration {
+    chunking_configuration {
+      chunking_strategy = "FIXED_SIZE"
+      fixed_size_chunking_configuration {
+        max_tokens = 300
+        overlap_percentage = 20
+      }
+    }
+  }
 }
 
 resource "aws_bedrock_guardrail" "heartbot" {
@@ -257,11 +267,6 @@ resource "aws_bedrock_guardrail" "heartbot" {
     pii_entities_config {
       action = "ANONYMIZE"
       type   = "EMAIL"
-    }
-
-    pii_entities_config {
-      action = "ANONYMIZE"
-      type   = "PHONE"
     }
 
     pii_entities_config {
