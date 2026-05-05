@@ -13,11 +13,11 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "heartbot-terraform-state-abaig"
-    key = "heartbot/terraform.tfstate"
-    region = "us-east-1"
+    bucket       = "heartbot-terraform-state-abaig"
+    key          = "heartbot/terraform.tfstate"
+    region       = "us-east-1"
     use_lockfile = true
-    encrypt = true
+    encrypt      = true
   }
 }
 
@@ -41,7 +41,7 @@ locals {
 }
 
 resource "aws_s3_bucket" "knowledge_base" {
-  bucket = "${var.project_name}-knowledge-base-${var.environment}"
+  bucket        = "${var.project_name}-knowledge-base-${var.environment}"
   force_destroy = true
 
   tags = local.common_tags
@@ -245,7 +245,7 @@ resource "aws_bedrockagent_data_source" "heartbot" {
     chunking_configuration {
       chunking_strategy = "FIXED_SIZE"
       fixed_size_chunking_configuration {
-        max_tokens = 300
+        max_tokens         = 300
         overlap_percentage = 20
       }
     }
@@ -500,15 +500,15 @@ resource "aws_lambda_permission" "api_gateway" {
 resource "aws_s3_bucket" "frontendbucket" {
   bucket        = "${var.project_name}-frontend-${var.environment}"
   force_destroy = true
-  tags = local.common_tags
+  tags          = local.common_tags
 }
 
 resource "aws_s3_bucket_public_access_block" "frontendblock" {
   bucket = aws_s3_bucket.frontendbucket.id
 
-  block_public_acls = true
-  block_public_policy = true
-  ignore_public_acls = true
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
   restrict_public_buckets = true
 }
 
@@ -531,10 +531,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "frontendencryptio
 }
 
 resource "aws_cloudfront_origin_access_control" "frontend" {
-  name = "${var.project_name}-oac-${var.environment}"
+  name                              = "${var.project_name}-oac-${var.environment}"
   origin_access_control_origin_type = "s3"
-  signing_behavior = "always"
-  signing_protocol = "sigv4"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
 }
 
 resource "aws_s3_bucket_policy" "frontendpolicy" {
@@ -545,20 +545,20 @@ resource "aws_s3_bucket_policy" "frontendpolicy" {
 data "aws_iam_policy_document" "frontendpolicydoc" {
   statement {
     principals {
-      type = "Service"
-      identifiers = [ "cloudfront.amazonaws.com" ]
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
     }
-    
+
     actions = [
       "s3:GetObject"
     ]
 
     condition {
-      test = "StringEquals"
+      test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values = [ aws_cloudfront_distribution.frontend.arn ]
+      values   = [aws_cloudfront_distribution.frontend.arn]
     }
 
-    resources = [ "${aws_s3_bucket.frontendbucket.arn}/*" ]
+    resources = ["${aws_s3_bucket.frontendbucket.arn}/*"]
   }
 }

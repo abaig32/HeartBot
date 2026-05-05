@@ -21,6 +21,13 @@ function formatSources(citations) {
   return sources;
 }
 
+function renderMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/\n/g, "<br/>");
+}
+
 function TypingIndicator() {
   return (
     <div className="message bot">
@@ -57,7 +64,7 @@ function Message({ msg }) {
       )}
       <div className="bubble-wrap">
         <div className={`bubble ${isBot ? "bot-bubble" : "user-bubble"}`}>
-          <p>{msg.content}</p>
+         <p dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
         </div>
         {isBot && msg.sources && msg.sources.length > 0 && (
           <div className="sources-wrap">
