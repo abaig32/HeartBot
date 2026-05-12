@@ -569,55 +569,55 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        "type": "metric",
-        "properties": {
-          "title": "Lambda Invocations",
-          "region": "us-east-1",
-          "metrics": [
+        "type" : "metric",
+        "properties" : {
+          "title" : "Lambda Invocations",
+          "region" : "us-east-1",
+          "metrics" : [
             ["AWS/Lambda", "Invocations", "FunctionName", aws_lambda_function.heartbot.function_name]
           ],
-          "stat": "Sum",
-          "period": 300,
-          "view": "timeSeries"
+          "stat" : "Sum",
+          "period" : 300,
+          "view" : "timeSeries"
         }
       },
       {
-        "type": "metric",
-        "properties": {
-          "title": "Lambda Errors",
-          "region": "us-east-1",
-          "metrics": [
+        "type" : "metric",
+        "properties" : {
+          "title" : "Lambda Errors",
+          "region" : "us-east-1",
+          "metrics" : [
             ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.heartbot.function_name]
           ],
-          "stat": "Sum",
-          "period": 300,
-          "view": "timeSeries"
+          "stat" : "Sum",
+          "period" : 300,
+          "view" : "timeSeries"
         }
       },
       {
-        "type": "metric",
-        "properties": {
-          "title": "Lambda Duration",
-          "region": "us-east-1",
-          "metrics": [
+        "type" : "metric",
+        "properties" : {
+          "title" : "Lambda Duration",
+          "region" : "us-east-1",
+          "metrics" : [
             ["AWS/Lambda", "Duration", "FunctionName", aws_lambda_function.heartbot.function_name]
           ],
-          "stat": "Average",
-          "period": 300,
-          "view": "timeSeries"
+          "stat" : "Average",
+          "period" : 300,
+          "view" : "timeSeries"
         }
       },
       {
-        "type": "metric",
-        "properties": {
-          "title": "API Gateway 4xx Errors",
-          "region": "us-east-1",
-          "metrics": [
+        "type" : "metric",
+        "properties" : {
+          "title" : "API Gateway 4xx Errors",
+          "region" : "us-east-1",
+          "metrics" : [
             ["AWS/ApiGateway", "4XXError", "ApiId", aws_apigatewayv2_api.heartbot.id]
           ],
-          "stat": "Sum",
-          "period": 300,
-          "view": "timeSeries"
+          "stat" : "Sum",
+          "period" : 300,
+          "view" : "timeSeries"
         }
       }
     ]
@@ -625,16 +625,16 @@ resource "aws_cloudwatch_dashboard" "main" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  alarm_name = "${var.project_name}-lambda-errors-${var.environment}"
-  alarm_description = "Heartbot Lambda Errors Exceeded Threshold"
+  alarm_name          = "${var.project_name}-lambda-errors-${var.environment}"
+  alarm_description   = "Heartbot Lambda Errors Exceeded Threshold"
   comparison_operator = "GreaterThanThreshold"
-  threshold = 5
-  evaluation_periods = 1
-  period = 300
-  statistic = "Sum"
-  namespace = "AWS/Lambda"
-  metric_name = "Errors"
-  treat_missing_data = "notBreaching"
+  threshold           = 5
+  evaluation_periods  = 1
+  period              = 300
+  statistic           = "Sum"
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  treat_missing_data  = "notBreaching"
 
   dimensions = {
     FunctionName = aws_lambda_function.heartbot.function_name
@@ -646,16 +646,16 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
-  alarm_name = "${var.project_name}-lambda-duration-${var.environment}"
-  alarm_description = "Heartbot Lambda Exceeded Duration"
+  alarm_name          = "${var.project_name}-lambda-duration-${var.environment}"
+  alarm_description   = "Heartbot Lambda Exceeded Duration"
   comparison_operator = "GreaterThanThreshold"
-  threshold = 25000
-  evaluation_periods = 1
-  period = 300
-  statistic = "Average"
-  namespace = "AWS/Lambda"
-  metric_name = "Duration"
-  treat_missing_data = "notBreaching"
+  threshold           = 25000
+  evaluation_periods  = 1
+  period              = 300
+  statistic           = "Average"
+  namespace           = "AWS/Lambda"
+  metric_name         = "Duration"
+  treat_missing_data  = "notBreaching"
 
   dimensions = {
     FunctionName = aws_lambda_function.heartbot.function_name
@@ -667,16 +667,16 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "apigw4xxerrors" {
-  alarm_name = "${var.project_name}-gateway-4xx-errors-${var.environment}"
-  alarm_description = "Heartbot API Gateway Has 4xx Errors"
+  alarm_name          = "${var.project_name}-gateway-4xx-errors-${var.environment}"
+  alarm_description   = "Heartbot API Gateway Has 4xx Errors"
   comparison_operator = "GreaterThanThreshold"
-  threshold = 10
-  evaluation_periods = 1
-  period = 300
-  statistic = "Sum"
-  namespace = "AWS/ApiGateway"
-  metric_name = "4XXError"
-  treat_missing_data = "notBreaching"
+  threshold           = 10
+  evaluation_periods  = 1
+  period              = 300
+  statistic           = "Sum"
+  namespace           = "AWS/ApiGateway"
+  metric_name         = "4XXError"
+  treat_missing_data  = "notBreaching"
 
   dimensions = {
     ApiId = aws_apigatewayv2_api.heartbot.id
