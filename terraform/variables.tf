@@ -54,3 +54,8 @@ variable "cors_allow_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+variable "alarm_email" {
+  description = "Email address to receive CloudWatch alarm notifications"
+  type        = string
+}
