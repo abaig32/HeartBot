@@ -23,6 +23,7 @@ function formatSources(citations) {
 
 function renderMarkdown(text) {
   return text
+    .replace(/^### (.*?)$/gm, "<strong>$1</strong>")
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
     .replace(/\n/g, "<br/>");

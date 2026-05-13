@@ -54,7 +54,7 @@ def lambda_handler(event, context):
                         },
                         'inferenceConfig': {
                             'textInferenceConfig': {
-                                'maxTokens': 512,
+                                'maxTokens': 1024,
                                 'temperature': 0.3,
                                 'topP': 0.9
                             }
