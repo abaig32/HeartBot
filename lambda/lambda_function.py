@@ -2,7 +2,6 @@ import json
 import boto3
 import os
 
-# Clients
 bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
 
 KNOWLEDGE_BASE_ID = os.environ['KNOWLEDGE_BASE_ID']

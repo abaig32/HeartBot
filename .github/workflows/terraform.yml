@@ -26,11 +26,9 @@ jobs:
         working-directory: terraform
 
     steps:
-      # Check out the repository so the workflow can access your code
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Configure AWS credentials from GitHub secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -38,19 +36,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Initialize Terraform — connects to your S3 remote backend
+      # Connects to the S3 remote backend and downloads provider plugins
       - name: Terraform Init
         run: terraform init
 
-      # Check formatting — fails the pipeline if your .tf files aren't formatted
+      # Fails the pipeline if any .tf file is not formatted — enforces consistency
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
-      # Validate the configuration — catches syntax errors and invalid references
+      # Catches syntax errors and invalid resource references before any AWS calls are made
       - name: Terraform Validate
         run: terraform validate
 
@@ -82,7 +79,6 @@ jobs:
               body: output
             });
 
-      # Fail the job if the plan failed
       - name: Terraform Plan Status
         if: github.event_name == 'pull_request' && steps.plan.outcome == 'failure'
         run: exit 1

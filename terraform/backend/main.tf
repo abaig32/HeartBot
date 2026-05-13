@@ -17,6 +17,7 @@ resource "aws_s3_bucket" "backendbucket" {
   bucket = "heartbot-terraform-state-abaig"
 
   lifecycle {
+    # Blocks `terraform destroy` from deleting the state bucket — losing this would orphan all managed resources.
     prevent_destroy = true
   }
 }
@@ -48,6 +49,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "backendconfig" {
   }
 }
 
+# Deny any non-HTTPS request to the state bucket — state files can contain sensitive values.
 resource "aws_s3_bucket_policy" "httpsaccess" {
   bucket = aws_s3_bucket.backendbucket.id
   policy = data.aws_iam_policy_document.onlyallowhttpsaccess.json
