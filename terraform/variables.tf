@@ -49,7 +49,7 @@ variable "cors_allow_origins" {
   description = <<-EOT
     Allowed origins for API Gateway CORS.
     In dev this is overridden to ["*"] automatically.
-    For staging/prod, set this to your Streamlit app URL, e.g. ["https://your-app.example.com"].
+    For staging/prod, set this to your React app URL, e.g. ["https://askheartbot.com].
   EOT
   type        = list(string)
   default     = ["*"]
