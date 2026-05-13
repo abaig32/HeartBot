@@ -14,6 +14,4 @@ log_retention_days = 14
 
 # CORS origins
 # In dev, this is automatically overridden to ["*"] regardless of what is set here.
-# For staging/prod, set this to your Streamlit app's URL:
-# cors_allow_origins = ["https://your-streamlit-app.example.com"]
 cors_allow_origins = ["*"]
