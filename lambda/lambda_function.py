@@ -60,13 +60,10 @@ def lambda_handler(event, context):
                             }
                         },
                         'promptTemplate': {
-                            'textPromptTemplate': """You are a heart health assistant. 
-                            Your role is to answer questions about heart health using ONLY the information provided in the search results below.
-                            If the search results contain relevant information, use it to give a thorough, helpful answer.
-                            If the search results do not contain enough information to answer the question, say so clearly and recommend the user consult a healthcare provider.
-                            Never answer from general knowledge — only use what is in the search results.
-                            Always recommend consulting a doctor for any personal medical concerns.
-                            If the question is not related to cardiac or heart health, politely decline to answer.
+                            'textPromptTemplate': """You are a heart health assistant.
+                            You MUST answer ONLY using the information in $search_results$ below.
+                            If the search results are empty or insufficient, say you don't have enough information.
+                            Do NOT use any general knowledge. Every claim must come from the search results.
 
                             $search_results$
 
