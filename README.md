@@ -43,6 +43,23 @@ For the deployment, I chose to have a remote Terraform state. I chose this over 
 **Two-Layer AI Safety**
 I used a two-layer AI safety approach by using Bedrock Guardrails for PII filtering and prompt engineering in the Lambda to restrict off-topic questions. I needed the guardrails to ensure that sensitive information could not be displayed by the model. This ensures things like SSN, phone numbers, and email remain anonymous whenever HeartBot generates a response. I needed to have the prompt engineering to ensure that HeartBot does not provide invalid information like diagnosis for users and only uses the information from the knowledge base. This makes sure that HeartBot only provides general information about a specific cardiac issue rather than diagnosing a user with a condition.
 
+## Problems solved
+
+**S3 Vectors 2048-byte metadata limit**
+Bedrock Knowledge Base ingestion was failing silently. The root cause was S3 Vectors enforcing a 2048-byte limit on chunk metadata, which the default chunking strategy exceeded with large source documents. Fixed by restructuring the knowledge base into 14 small, focused files and tuning the chunking configuration to `max_tokens: 300` with 20% overlap.
+
+**Guardrail anonymizing 911 as a phone number**
+The PII guardrail was configured with `PHONE` anonymization, which caused it to redact "911" from responses — breaking any answer that referenced emergency services. Fixed by removing `PHONE` from the PII entity config. `NAME`, `EMAIL`, `SSN`, and `AGE` remain anonymized.
+
+**RAG not retrieving from knowledge base**
+Early responses were ignoring the knowledge base entirely and falling back to Nova Micro's general knowledge. The issue was the Lambda prompt template not correctly referencing the `$search_results$` variable in the expected format. Fixed by rewriting the prompt template to explicitly scope responses to knowledge base content only.
+
+**CI/CD pipeline blocked on alarm email variable**
+`terraform apply` was failing in GitHub Actions because `var.alarm_email` had no default and was not being passed to the pipeline. Fixed by adding `TF_VAR_ALARM_EMAIL` as a GitHub secret and referencing it as an environment variable in the workflow's apply step.
+
+**State lock conflicts during development**
+Concurrent or interrupted `terraform apply` runs left stale lock files in the S3 backend, blocking subsequent runs. Resolved with `terraform force-unlock` and documented the pattern to prevent recurrence.
+
 ## Features
 
 - Answers questions about heart attack symptoms, warning signs, and when to seek emergency care
@@ -54,17 +71,15 @@ I used a two-layer AI safety approach by using Bedrock Guardrails for PII filter
 - Filters personal information from responses to protect user privacy
 - Displays source references alongside responses so users can verify information
 
-## Infrastructure
-
-Terraform manages the deployment of the entire infrastructure of this project. It creates all of the S3 buckets, CloudFront Distributions, Lambda Function, API Gateway, Bedrock Guardrails and Knowledge Base Configurations, IAM Policies, and CloudWatch Dashboard. It creates the bucket policies as well as widgets for CloudWatch, ensuring that the entire chatbot can come online and be operational in a very short time as compared to having to manually configure everything through the AWS Console. All infrastructure state is stored remotely in S3 with native lockfile support to prevent concurrent modifications.
-
 ## CI/CD
 
-Frontend Pipeline
-- The Frontend Pipeline focused on using GitHub actions goes through a series of actions whenever there are changes to made in any files in the frontend. It goes through the steps of configuring AWS credentials, setting up Node.js, install dependencies, build, deploying to S3, and invalidating the CloudFront cache. This ensures that the code changes pushed to the repo do not create any errors or issues with the current deployment. 
+**Terraform pipeline** (`terraform.yml`)
 
-Terraform Pipeline
-- The Terraform Pipeline also focused on using GitHub actions goes through a series of actions whenever there are changes made in any files in the terraform folder. The steps that this pipeline follows are configuring the AWS credentials, setting up terraform, running terraform init, doing a terraform format check, running terraform validate, terraform plan runs on PRs and posts as a comment, and terraform apply only runs on merge to main. This ensures the new code changes don't create issues with the current deployment.
+Triggers on any change to `terraform/` via push or pull request. On pull requests, runs `terraform init`, `fmt -check`, `validate`, and `plan`, then posts the plan output as a PR comment so infrastructure changes are reviewable before merge. On merge to main, runs `terraform apply -auto-approve`. The `alarm_email` variable is injected at runtime via `TF_VAR_ALARM_EMAIL` GitHub secret so sensitive values are never committed.
+
+**Frontend pipeline** (`frontend.yml`)
+
+Triggers on any change to `frontend/` on push to main. Injects `VITE_API_URL` at build time from GitHub secrets so the API Gateway URL is never committed to the repository. Syncs the built `dist/` to S3 with `--delete` to remove stale files, sets `cache-control: immutable` for long-lived asset caching, then invalidates the CloudFront distribution so users receive the new build immediately.
 
 ## Setup & Deployment
 
