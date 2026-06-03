@@ -92,6 +92,102 @@ resource "aws_s3_bucket_lifecycle_configuration" "knowledge_base" {
   }
 }
 
+# Destination bucket in us-west-2 for disaster recovery
+provider "aws" {
+  alias  = "us_west_2"
+  region = "us-west-2"
+}
+
+resource "aws_s3_bucket" "knowledge_base_replica" {
+  provider      = aws.us_west_2
+  bucket        = "${var.project_name}-knowledge-base-replica-${var.environment}"
+  force_destroy = true
+  tags          = local.common_tags
+}
+
+resource "aws_s3_bucket_versioning" "knowledge_base_replica" {
+  provider = aws.us_west_2
+  bucket   = aws_s3_bucket.knowledge_base_replica.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "knowledge_base_replica" {
+  provider = aws.us_west_2
+  bucket   = aws_s3_bucket.knowledge_base_replica.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "knowledge_base_replica" {
+  provider                = aws.us_west_2
+  bucket                  = aws_s3_bucket.knowledge_base_replica.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# IAM role that grants S3 permission to replicate objects
+resource "aws_iam_role" "s3_replication" {
+  name = "${var.project_name}-s3-replication-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "s3.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "s3_replication" {
+  role = aws_iam_role.s3_replication.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["s3:GetReplicationConfiguration", "s3:ListBucket"]
+        Resource = [aws_s3_bucket.knowledge_base.arn]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObjectVersionForReplication", "s3:GetObjectVersionAcl", "s3:GetObjectVersionTagging"]
+        Resource = ["${aws_s3_bucket.knowledge_base.arn}/*"]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ReplicateObject", "s3:ReplicateDelete", "s3:ReplicateTags"]
+        Resource = ["${aws_s3_bucket.knowledge_base_replica.arn}/*"]
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket_replication_configuration" "knowledge_base" {
+  bucket = aws_s3_bucket.knowledge_base.id
+  role   = aws_iam_role.s3_replication.arn
+
+  rule {
+    id     = "replicate-to-us-west-2"
+    status = "Enabled"
+
+    destination {
+      bucket        = aws_s3_bucket.knowledge_base_replica.arn
+      storage_class = "STANDARD_IA"
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.knowledge_base]
+}
+
 resource "aws_s3vectors_vector_bucket" "heartbot" {
   vector_bucket_name = "${var.project_name}-vectors-${var.environment}"
 }
@@ -352,14 +448,14 @@ resource "aws_iam_role_policy" "lambda" {
 
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${local.lambda_function_name}"
-  retention_in_days = var.log_retention_days
+  retention_in_days = 365
 
   tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "api_gateway" {
   name              = "/aws/apigateway/${var.project_name}-${var.environment}"
-  retention_in_days = var.log_retention_days
+  retention_in_days = 365
 
   tags = local.common_tags
 }
@@ -420,6 +516,12 @@ resource "aws_lambda_function" "heartbot" {
       ENVIRONMENT       = var.environment
     }
   }
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  reserved_concurrent_executions = 100
 
   depends_on = [
     aws_cloudwatch_log_group.lambda,

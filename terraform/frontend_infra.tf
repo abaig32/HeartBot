@@ -46,6 +46,32 @@ resource "aws_acm_certificate_validation" "heartbot" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
+resource "aws_cloudfront_response_headers_policy" "security_headers" {
+  provider = aws.us_east_1
+  name     = "${var.project_name}-security-headers-${var.environment}"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+    content_type_options {
+      override = true
+    }
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+    xss_protection {
+      mode_block = true
+      protection = true
+      override   = true
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -65,6 +91,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
 
     forwarded_values {
       query_string = false
@@ -102,6 +129,8 @@ resource "aws_cloudfront_distribution" "frontend" {
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
+
+  
 
   tags = local.common_tags
 }

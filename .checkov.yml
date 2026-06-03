@@ -1,0 +1,18 @@
+skip-check:
+  - CKV_AWS_86    # CloudFront access logging: adds cost, no benefit at this scale
+  - CKV_AWS_310   # CloudFront origin failover: single-origin by design
+  - CKV_AWS_374   # CloudFront geo restriction: public health site, intentionally global
+  - CKV_AWS_68    # CloudFront WAF: ~$5/month, not justified for personal project
+  - CKV2_AWS_47   # CloudFront WAF Log4j: no WAF attached, see CKV_AWS_68
+  - CKV_AWS_158   # CloudWatch KMS: log data is non-sensitive, KMS adds ~$1/month per key
+  - CKV_AWS_272   # Lambda code signing: enterprise compliance feature, not applicable
+  - CKV_AWS_116   # Lambda DLQ: synchronous invocation, errors return directly to caller
+  - CKV_AWS_173   # Lambda env var KMS: env vars are resource IDs only, not secrets
+  - CKV_AWS_117   # Lambda VPC: would require NAT Gateway at ~$30/month
+  - CKV_AWS_309   # API Gateway auth: public API by design
+  - CKV_AWS_26    # SNS KMS: alarm notifications only, no sensitive data
+  - CKV2_AWS_62   # S3 event notifications: no event-driven processing required
+  - CKV_AWS_18    # S3 access logging: adds cost, no operational benefit at this scale
+  - CKV_AWS_145   # S3 KMS: AES-256 SSE already enabled, KMS adds cost with no improvement
+  - CKV_AWS_144   # S3 cross-region replication: suppressed for non-knowledge-base buckets
+  - CKV2_AWS_61   # S3 lifecycle config: not applicable for state/frontend buckets
