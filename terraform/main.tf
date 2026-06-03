@@ -153,8 +153,8 @@ resource "aws_iam_role_policy" "s3_replication" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["s3:GetReplicationConfiguration", "s3:ListBucket"]
+        Effect   = "Allow"
+        Action   = ["s3:GetReplicationConfiguration", "s3:ListBucket"]
         Resource = [aws_s3_bucket.knowledge_base.arn]
       },
       {
