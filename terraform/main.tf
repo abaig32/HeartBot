@@ -521,7 +521,7 @@ resource "aws_lambda_function" "heartbot" {
     mode = "Active"
   }
 
-  reserved_concurrent_executions = 100
+  reserved_concurrent_executions = 10
 
   depends_on = [
     aws_cloudwatch_log_group.lambda,
