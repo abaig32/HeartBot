@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+from botocore.exceptions import ClientError
 
 bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
 
@@ -100,18 +101,28 @@ def lambda_handler(event, context):
             'headers': CORS_HEADERS,
             'body': json.dumps({'error': 'Invalid JSON in request body'})
         }
-    except bedrock_agent_runtime.exceptions.ValidationException as e:
-        return {
-            'statusCode': 400,
-            'headers': CORS_HEADERS,
-            'body': json.dumps({'error': f'Validation error: {str(e)}'})
-        }
-    except bedrock_agent_runtime.exceptions.AccessDeniedException as e:
-        return {
-            'statusCode': 403,
-            'headers': CORS_HEADERS,
-            'body': json.dumps({'error': f'Access denied: {str(e)}'})
-        }
+    
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'ValidationException':
+            return {
+                'statusCode': 400,
+                'headers': CORS_HEADERS,
+                'body': json.dumps({'error': f'Validation error: {str(e)}'})
+            }
+        elif error_code == 'AccessDeniedException':
+            return {
+                'statusCode': 403,
+                'headers': CORS_HEADERS,
+                'body': json.dumps({'error': f'Access denied: {str(e)}'})
+            }
+        else:
+            return {
+                'statusCode': 500,
+                'headers': CORS_HEADERS,
+                'body': json.dumps({'error': f'AWS error: {str(e)}'})
+            }
+        
     except Exception as e:
         return {
             'statusCode': 500,
