@@ -1,7 +1,11 @@
 import json
 import boto3
 import os
+import logging
 from botocore.exceptions import ClientError
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
 
@@ -30,6 +34,12 @@ def lambda_handler(event, context):
         
         body = json.loads(event.get('body', '{}'))
         user_query = body.get('query', '')
+
+        logger.info(json.dumps({
+            "event": "request_received",
+            "query_length": len(user_query),
+            "environment": os.environ.get("ENVIRONMENT", "unknown")
+        }))
 
         if not user_query:
             return {
@@ -80,11 +90,14 @@ def lambda_handler(event, context):
                 }
             }
         )
-
-        print("API Response:", json.dumps(response, indent=2, default=str))
         
         answer = response['output']['text']
         citations = response.get('citations', [])
+        logger.info(json.dumps({
+            "event": "bedrock_response_received",
+            "answer_length": len(answer),
+            "citation_count": len(citations)
+        }))
 
         return {
             'statusCode': 200,
