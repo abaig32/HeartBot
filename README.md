@@ -168,6 +168,34 @@ Visit [https://askheartbot.com](https://askheartbot.com) or your own domain if s
 
 ---
 
+## Cost
+
+# HeartBot Monthly Cost Breakdown
+
+Estimated monthly cost for the production environment at low traffic (~100 requests/day).
+
+| Service | Usage | Estimated Cost |
+|---|---|---|
+| Amazon Bedrock (Nova Micro) | ~3000 requests/month | ~$0.50 |
+| Amazon Bedrock Knowledge Base | Retrieval queries | ~$0.30 |
+| AWS Lambda | ~3000 invocations, 256MB, ~5s avg | ~$0.00 (free tier) |
+| API Gateway | ~3000 requests | ~$0.01 |
+| CloudFront | ~3000 requests + static assets | ~$0.01 |
+| S3 (knowledge base + frontend) | < 1GB storage | ~$0.02 |
+| S3 Vectors | Vector index storage | ~$0.10 |
+| Route 53 | 1 hosted zone | ~$0.50 |
+| CloudWatch | Logs + dashboards + alarms | ~$0.05 |
+| SNS | Email notifications | ~$0.00 |
+| S3 Replication (us-west-2) | < 1GB replicated | ~$0.02 |
+| **Total** | | **~$1.50/month** |
+
+## Notes
+- Lambda stays within free tier at this traffic level (1M requests/month free)
+- Bedrock costs scale linearly with usage — heaviest cost driver
+- Route 53 hosted zone is the largest fixed cost regardless of traffic
+- Replica bucket uses STANDARD_IA storage class to minimize DR cost
+
 ## Disclaimer
 
 HeartBot is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for medical concerns.
+
