@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - develop
     paths:
       - 'terraform/**'
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - 'terraform/**'
 
@@ -39,26 +41,37 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Connects to the S3 remote backend and downloads provider plugins
+      - name: Set environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.base_ref }}" == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "var_file=prod.tfvars" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "var_file=dev.tfvars" >> $GITHUB_OUTPUT
+          fi
+
       - name: Terraform Init
         run: terraform init
 
-      # Fails the pipeline if any .tf file is not formatted — enforces consistency
+      - name: Terraform Workspace
+        run: |
+          terraform workspace select ${{ steps.env.outputs.environment }} || \
+          terraform workspace new ${{ steps.env.outputs.environment }}
+
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
-      # Catches syntax errors and invalid resource references before any AWS calls are made
       - name: Terraform Validate
         run: terraform validate
 
-      # On pull requests — run plan and post the output as a PR comment
-      # This lets you review exactly what will change before merging
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
         id: plan
         env:
           TF_VAR_alarm_email: ${{ secrets.TF_VAR_ALARM_EMAIL }}
-        run: terraform plan -no-color
+        run: terraform plan -var-file=${{ steps.env.outputs.var_file }} -no-color
         continue-on-error: true
 
       - name: Post Plan to PR
@@ -67,7 +80,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Plan
+            const output = `#### Terraform Plan (\`${{ steps.env.outputs.environment }}\`)
             \`\`\`
             ${{ steps.plan.outputs.stdout }}
             \`\`\`
@@ -83,9 +96,8 @@ jobs:
         if: github.event_name == 'pull_request' && steps.plan.outcome == 'failure'
         run: exit 1
 
-      # On merge to main — apply the changes automatically
       - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         env:
           TF_VAR_alarm_email: ${{ secrets.TF_VAR_ALARM_EMAIL }}
-        run: terraform apply -auto-approve
+        run: terraform apply -var-file=${{ steps.env.outputs.var_file }} -auto-approve
