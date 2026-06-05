@@ -31,7 +31,7 @@ function renderMarkdown(text) {
 
 function TypingIndicator() {
   return (
-    <div className="message bot">
+    <div className="message bot"> 
       <div className="avatar">
         <HeartIcon />
       </div>

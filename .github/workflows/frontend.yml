@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
     paths:
       - 'frontend/**'
 
@@ -23,6 +24,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Set environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "bucket=heartbot-frontend-prod" >> $GITHUB_OUTPUT
+            echo "distribution_id=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PROD }}" >> $GITHUB_OUTPUT
+            echo "api_url=${{ secrets.VITE_API_URL_PROD }}" >> $GITHUB_OUTPUT
+          else
+            echo "bucket=heartbot-frontend-dev" >> $GITHUB_OUTPUT
+            echo "distribution_id=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_DEV }}" >> $GITHUB_OUTPUT
+            echo "api_url=${{ secrets.VITE_API_URL_DEV }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,24 +48,20 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # VITE_API_URL is injected at build time from GitHub secrets
-      # so the real API Gateway URL is never committed to the repo
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: ${{ steps.env.outputs.api_url }}
         run: npm run build
 
-      # --delete removes files from S3 that no longer exist in dist/, keeping the bucket clean
       - name: Deploy to S3
         run: |
-          aws s3 sync frontend/dist/ s3://heartbot-frontend-dev \
+          aws s3 sync frontend/dist/ s3://${{ steps.env.outputs.bucket }} \
             --delete \
             --cache-control "public, max-age=31536000, immutable"
 
-      # Without this, CloudFront would serve stale cached files for up to 24 hours after each deploy
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id ${{ steps.env.outputs.distribution_id }} \
             --paths "/*"
