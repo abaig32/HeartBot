@@ -7,7 +7,7 @@ provider "aws" {
 resource "aws_acm_certificate" "heartbot" {
   provider = aws.us_east_1
 
-  count = var.environment == "prod" ? 1 : 0
+  count                     = var.environment == "prod" ? 1 : 0
   domain_name               = "askheartbot.com"
   subject_alternative_names = ["www.askheartbot.com"]
   validation_method         = "DNS"
@@ -43,9 +43,9 @@ resource "aws_route53_record" "cert_validation" {
 
 resource "aws_acm_certificate_validation" "heartbot" {
   provider = aws.us_east_1
-  
-  count = var.environment == "prod" ? 1 : 0
-  certificate_arn = aws_acm_certificate.heartbot[0].arn
+
+  count                   = var.environment == "prod" ? 1 : 0
+  certificate_arn         = aws_acm_certificate.heartbot[0].arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
@@ -80,7 +80,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   price_class         = "PriceClass_100" # US, Canada, Europe only — cheapest option
-    aliases           = var.environment == "prod" ? ["askheartbot.com", "www.askheartbot.com"] : []
+  aliases             = var.environment == "prod" ? ["askheartbot.com", "www.askheartbot.com"] : []
 
   origin {
     domain_name              = aws_s3_bucket.frontendbucket.bucket_regional_domain_name
@@ -127,7 +127,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
-   dynamic "viewer_certificate" {
+  dynamic "viewer_certificate" {
     for_each = var.environment == "prod" ? [1] : []
     content {
       acm_certificate_arn      = aws_acm_certificate_validation.heartbot[0].certificate_arn
