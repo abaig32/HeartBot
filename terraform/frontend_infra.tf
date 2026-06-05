@@ -32,6 +32,7 @@ resource "aws_route53_record" "cert_validation" {
     }
   }
 
+  allow_overwrite = true
   zone_id = data.aws_route53_zone.heartbot.zone_id
   name    = each.value.name
   type    = each.value.type
