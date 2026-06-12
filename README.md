@@ -60,6 +60,12 @@ Early responses were ignoring the knowledge base entirely and falling back to No
 **State lock conflicts during development**
 Concurrent or interrupted `terraform apply` runs left stale lock files in the S3 backend, blocking subsequent runs. Resolved with `terraform force-unlock` and documented the pattern to prevent recurrence.
 
+**CloudFront CNAMEAlreadyExists across environments**
+When standing up the dev environment, Terraform attempted to attach askheartbot.com as a CloudFront alias on the dev distribution, which failed because the domain was already claimed by the prod distribution. Fixed by making the ACM certificate, certificate validation records, CloudFront aliases, and Route 53 DNS records conditional on var.environment == "prod" using count. The dev CloudFront distribution is accessible via its default *.cloudfront.net domain only.
+
+**Default workspace state contained live prod DNS records**
+After migrating to named workspaces, the legacy default workspace still tracked the same physical Route 53 records as the prod workspace. Running terraform destroy on default would have deleted the live DNS records for askheartbot.com. Used terraform state rm to detach the shared resources from the default state before destroying, preserving the live infrastructure.
+
 ## Features
 
 - Answers questions about heart attack symptoms, warning signs, and when to seek emergency care
@@ -75,11 +81,25 @@ Concurrent or interrupted `terraform apply` runs left stale lock files in the S3
 
 **Terraform pipeline** (`terraform.yml`)
 
-Triggers on any change to `terraform/` via push or pull request. On pull requests, runs `terraform init`, `fmt -check`, `validate`, and `plan`, then posts the plan output as a PR comment so infrastructure changes are reviewable before merge. On merge to main, runs `terraform apply -auto-approve`. The `alarm_email` variable is injected at runtime via `TF_VAR_ALARM_EMAIL` GitHub secret so sensitive values are never committed.
+Triggers on changes to `terraform/` via push or pull request to either `main` or `develop`. The pipeline detects the target branch and selects the corresponding Terraform workspace and var file automatically:
+
+| Branch | Workspace | Var file |
+|---|---|---|
+| `develop` | `dev` | `dev.tfvars` |
+| `main` | `prod` | `prod.tfvars` |
+
+On pull requests, runs `init`, `fmt -check`, `validate`, and `plan`, then posts the plan as a PR comment so infrastructure changes are reviewable before merge. On push, runs `terraform apply -auto-approve` against the appropriate workspace. The `alarm_email` variable is injected at runtime via `TF_VAR_ALARM_EMAIL` GitHub secret so sensitive values are never committed.
 
 **Frontend pipeline** (`frontend.yml`)
 
-Triggers on any change to `frontend/` on push to main. Injects `VITE_API_URL` at build time from GitHub secrets so the API Gateway URL is never committed to the repository. Syncs the built `dist/` to S3 with `--delete` to remove stale files, sets `cache-control: immutable` for long-lived asset caching, then invalidates the CloudFront distribution so users receive the new build immediately.
+Triggers on changes to `frontend/` on push to `main` or `develop`. Deploys to the environment-matched S3 bucket and CloudFront distribution:
+
+| Branch | S3 Bucket | CloudFront |
+|---|---|---|
+| `develop` | `heartbot-frontend-dev` | `CLOUDFRONT_DISTRIBUTION_ID_DEV` |
+| `main` | `heartbot-frontend-prod` | `CLOUDFRONT_DISTRIBUTION_ID_PROD` |
+
+Injects `VITE_API_URL` at build time from the matching GitHub secret so the API Gateway URL is never committed. Syncs the built `dist/` to S3 with `--delete` to remove stale files, then invalidates the CloudFront distribution so users receive the new build immediately.
 
 ## Setup & Deployment
 
@@ -104,11 +124,11 @@ cd HeartBot
 ### 2. Deploy AWS infrastructure
 ```bash
 cd terraform
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your alarm_email and any other settings
 terraform init
-terraform plan
-terraform apply
+terraform workspace new dev   # or 'prod' for production
+terraform workspace select dev
+terraform plan -var-file=dev.tfvars
+terraform apply -var-file=dev.tfvars
 ```
 
 After `apply` completes, note the outputs — you will need `api_gateway_url` and `knowledge_base_id`.
@@ -164,7 +184,7 @@ aws cloudfront create-invalidation \
 
 ### 6. Access the application
 
-Visit [https://askheartbot.com](https://askheartbot.com) or your own domain if self-hosting.
+Visit https://askheartbot.com or the CloudFront domain from terraform output cloudfront_domain for dev.
 
 ---
 
@@ -188,6 +208,8 @@ Estimated monthly cost for the production environment at low traffic (~100 reque
 | SNS | Email notifications | ~$0.00 |
 | S3 Replication (us-west-2) | < 1GB replicated | ~$0.02 |
 | **Total** | | **~$1.50/month** |
+
+- Dev environment has no CloudFront custom domain or Route 53 records — no additional fixed costs
 
 ## Notes
 - Lambda stays within free tier at this traffic level (1M requests/month free)

@@ -1,6 +1,16 @@
 # HeartBot Runbook
 
+## Environments
+
+| Environment | Log Group (Lambda) | Log Group (API Gateway) |
+|---|---|---|
+| prod | `/aws/lambda/heartbot-handler-prod` | `heartbot-apigw-prod` |
+| dev | `/aws/lambda/heartbot-handler-dev` | `heartbot-apigw-dev` |
+
 ## Alarms
+
+Alarms are configured per environment and deliver to SNS → email.
+
 | Alarm | Threshold | What it means |
 |---|---|---|
 | Lambda Errors | >5 in 5 min | Lambda is crashing on requests |
@@ -10,7 +20,7 @@
 ## Diagnosing Issues
 
 ### Lambda errors spiking
-1. Open CloudWatch Logs for /aws/lambda/heartbot-handler-prod
+1. Open CloudWatch Logs for `/aws/lambda/heartbot-handler-prod`
 2. Run this Logs Insights query:
     ```
     filter event = "request_received"
@@ -30,6 +40,9 @@
 3. If abuse, consider enabling WAF rate limiting
 
 ## Recovery
+
 - **Frontend down**: Invalidate CloudFront cache, re-run frontend GitHub Actions workflow
-- **Lambda broken**: Revert last commit, push to main, pipeline redeploys automatically
-- **Knowledge base corrupted**: Documents replicated to us-west-2 — restore from replica bucket
+- **Lambda broken**: Revert last commit on `main`, push, pipeline redeploys automatically
+- **Knowledge base corrupted**: Documents replicated to us-west-2 — restore from `heartbot-knowledge-base-replica-prod`
+- **Terraform state lock stuck**: Run `terraform workspace select prod && terraform force-unlock <lock-id>` — lock ID is shown in the error message
+- **Dev environment broken**: Issues on `develop` branch do not affect prod — fix forward or revert on `develop`
