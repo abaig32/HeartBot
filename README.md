@@ -61,10 +61,10 @@ Early responses were ignoring the knowledge base entirely and falling back to No
 Concurrent or interrupted `terraform apply` runs left stale lock files in the S3 backend, blocking subsequent runs. Resolved with `terraform force-unlock` and documented the pattern to prevent recurrence.
 
 **CloudFront CNAMEAlreadyExists across environments**
-When standing up the dev environment, Terraform attempted to attach askheartbot.com as a CloudFront alias on the dev distribution, which failed because the domain was already claimed by the prod distribution. Fixed by making the ACM certificate, certificate validation records, CloudFront aliases, and Route 53 DNS records conditional on var.environment == "prod" using count. The dev CloudFront distribution is accessible via its default *.cloudfront.net domain only.
+When standing up the dev environment, Terraform attempted to attach `askheartbot.com` as a CloudFront alias on the dev distribution, which failed because the domain was already claimed by the prod distribution. Fixed by making the ACM certificate, certificate validation records, CloudFront aliases, and Route 53 DNS records conditional on `var.environment == "prod"` using `count`. The dev CloudFront distribution is accessible via its default `*.cloudfront.net` domain only.
 
 **Default workspace state contained live prod DNS records**
-After migrating to named workspaces, the legacy default workspace still tracked the same physical Route 53 records as the prod workspace. Running terraform destroy on default would have deleted the live DNS records for askheartbot.com. Used terraform state rm to detach the shared resources from the default state before destroying, preserving the live infrastructure.
+After migrating to named workspaces, the legacy default workspace still tracked the same physical Route 53 records as the prod workspace. Running `terraform destroy` on default would have deleted the live DNS records for `askheartbot.com`. Used terraform state rm to detach the shared resources from the default state before destroying, preserving the live infrastructure.
 
 ## Features
 
