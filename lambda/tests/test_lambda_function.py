@@ -39,9 +39,22 @@ def mock_bedrock_response():
                     }
                 ]
             }
-        ]
+        ],
+        "sessionId": {
+            "text": "abc-123"
+        }
     }
 
+
+def test_sessionid_key(valid_event, mock_bedrock_response):
+    with patch('lambda_function.bedrock_agent_runtime') as mock_client:
+        mock_client.retrieve_and_generate.return_value = mock_bedrock_response
+
+        result = lambda_function.lambda_handler(valid_event, {})
+
+        result = json.loads(result['body'])
+
+        assert result["sessionId"] == {"text": "abc-123"}
 
 def test_valid_query_returns_200(valid_event, mock_bedrock_response):
     with patch('lambda_function.bedrock_agent_runtime') as mock_client:

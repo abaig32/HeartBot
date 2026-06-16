@@ -34,6 +34,7 @@ def lambda_handler(event, context):
         
         body = json.loads(event.get('body', '{}'))
         user_query = body.get('query', '')
+        session_id = body.get('sessionId')
 
         logger.info(json.dumps({
             "event": "request_received",
@@ -49,11 +50,11 @@ def lambda_handler(event, context):
             }
 
         
-        response = bedrock_agent_runtime.retrieve_and_generate(
-            input={
+        kwargs = { 
+            'input': {
                 'text': user_query
             },
-            retrieveAndGenerateConfiguration={
+            'retrieveAndGenerateConfiguration': {
                 'type': 'KNOWLEDGE_BASE',
                 'knowledgeBaseConfiguration': {
                     'knowledgeBaseId': KNOWLEDGE_BASE_ID,
@@ -89,10 +90,16 @@ def lambda_handler(event, context):
                     }
                 }
             }
-        )
+        }
+
+        if session_id:
+            kwargs['sessionId'] = session_id
+
+        response = bedrock_agent_runtime.retrieve_and_generate(**kwargs)
         
         answer = response['output']['text']
         citations = response.get('citations', [])
+        session_id = response.get('sessionId')
         logger.info(json.dumps({
             "event": "bedrock_response_received",
             "answer_length": len(answer),
@@ -105,6 +112,7 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'answer': answer,
                 'citations': citations,
+                'sessionId': session_id
             })
         }
 
