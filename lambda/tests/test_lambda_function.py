@@ -56,6 +56,14 @@ def test_sessionid_key(valid_event, mock_bedrock_response):
 
         assert result["sessionId"] == {"text": "abc-123"}
 
+def test_session_id_included_when_provided(mock_bedrock_response):
+    event_with_session = {"body": json.dumps({"query": "...", "sessionId": "abc-123"})}
+    with patch('lambda_function.bedrock_agent_runtime') as mock_client:
+        mock_client.retrieve_and_generate.return_value = mock_bedrock_response
+        lambda_function.lambda_handler(event_with_session, {})
+
+        assert mock_client.retrieve_and_generate.call_args.kwargs["sessionId"] == "abc-123"
+
 def test_valid_query_returns_200(valid_event, mock_bedrock_response):
     with patch('lambda_function.bedrock_agent_runtime') as mock_client:
         mock_client.retrieve_and_generate.return_value = mock_bedrock_response
