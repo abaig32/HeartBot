@@ -7,12 +7,14 @@ on:
       - develop
     paths:
       - 'terraform/**'
+      - 'lambda/**'
   pull_request:
     branches:
       - main
       - develop
     paths:
       - 'terraform/**'
+      - 'lambda/**'
 
 permissions:
   contents: read
