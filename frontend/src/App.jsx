@@ -115,6 +115,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const [sessionId, setSessionId] = useState(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,11 +133,12 @@ export default function App() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text }),
+       body: JSON.stringify({ query: text, ...(sessionId ? { sessionId } : {}) }),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (data.sessionId) setSessionId(data.sessionId)
 
       setMessages((prev) => [
         ...prev,
